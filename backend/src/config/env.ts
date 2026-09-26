@@ -30,11 +30,13 @@ const schema = z.object({
   API_PREFIX: z.string().startsWith('/').default('/api/v1'),
   CORS_ORIGINS: z.string().default('http://localhost:5173,http://127.0.0.1:5173'),
 
-  DB_HOST: z.string().min(1),
+  // Optional on their own because a managed host supplies `DATABASE_URL`
+  // instead. The check below refuses a configuration that has neither.
+  DB_HOST: z.string().min(1).optional(),
   DB_PORT: z.coerce.number().int().positive().default(5432),
-  DB_USERNAME: z.string().min(1),
-  DB_PASSWORD: z.string(),
-  DB_DATABASE: z.string().min(1),
+  DB_USERNAME: z.string().min(1).optional(),
+  DB_PASSWORD: z.string().optional(),
+  DB_DATABASE: z.string().min(1).optional(),
   DB_SCHEMA: z.string().default('public'),
   DB_SSL: envBoolean(false),
   DB_LOGGING: envBoolean(false),
@@ -107,6 +109,17 @@ export const env = {
 
 if (env.isProduction && env.DB_SYNCHRONIZE) {
   throw new Error('DB_SYNCHRONIZE must be false in production - use migrations.');
+}
+
+/**
+ * Exactly one way of reaching the database has to be complete. Catching a half
+ * -filled configuration here turns it into a clear startup message instead of
+ * an obscure driver error on the first query.
+ */
+if (!env.DATABASE_URL && (!env.DB_HOST || !env.DB_USERNAME || !env.DB_DATABASE)) {
+  throw new Error(
+    'Database is not configured: set DATABASE_URL, or all of DB_HOST, DB_USERNAME and DB_DATABASE.',
+  );
 }
 
 export type Env = typeof env;
