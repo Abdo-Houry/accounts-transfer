@@ -81,7 +81,21 @@ services:
       - key: SEED_ADMIN_PASSWORD
         sync: false
 
-      # The PostgreSQL connection string, e.g. from Neon:
-      #   postgresql://user:password@host/dbname?sslmode=require
+      # Wired by Render from the database declared below, so the connection
+      # string is never typed, copied or stored anywhere by hand.
+      #
+      # To use an external database instead (Neon, Supabase, …), delete the
+      # `databases:` block and replace this entry with:
+      #     - key: DATABASE_URL
+      #       sync: false
+      # Render will then ask for the connection string once, at creation.
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: remittance-office-db
+          property: connectionString
+
+databases:
+  - name: remittance-office-db
+    plan: free
+    region: frankfurt
+    postgresMajorVersion: "17"
