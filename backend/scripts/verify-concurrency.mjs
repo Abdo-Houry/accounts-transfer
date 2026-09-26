@@ -10,7 +10,9 @@
  * requests at the same instant.
  */
 
-const BASE = 'http://localhost:4000/api/v1';
+import { API_BASE, ADMIN } from './lib/config.mjs';
+
+const BASE = API_BASE;
 let token = null;
 
 async function api(method, path, body) {
@@ -38,7 +40,7 @@ async function boxBalance(boxId, currencyId) {
 }
 
 const run = async () => {
-  token = (await api('POST', '/auth/login', { username: 'admin', password: 'Admin@12345' })).body.data.accessToken;
+  token = (await api('POST', '/auth/login', ADMIN)).body.data.accessToken;
 
   const currencies = (await api('GET', '/currencies')).body.data;
   const byCode = Object.fromEntries(currencies.map((c) => [c.code, c]));

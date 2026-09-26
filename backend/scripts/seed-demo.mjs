@@ -260,6 +260,7 @@ async function run() {
           'customer.read',
           'currency.read',
           'cashbox.read',
+          'cashbox.reconcile',
           'transfer.read',
           'exchange.read',
           'voucher.read',
@@ -483,8 +484,21 @@ async function run() {
   console.log(`  ${vouchers} vouchers`);
 
   // ---------------------------------------------------------- back-dating
-  console.log('Spreading the history over the last 30 days…');
-  await backdate();
+  // Needs a direct database connection, which is not available when seeding a
+  // hosted instance over its public API. Skipped with a warning rather than
+  // failing: everything above is already created and correct, only the history
+  // stays bunched on today.
+  if (env.SKIP_BACKDATE === 'true') {
+    console.log('Skipping the back-dating pass (SKIP_BACKDATE=true).');
+  } else {
+    console.log('Spreading the history over the last 30 days…');
+    try {
+      await backdate();
+    } catch (error) {
+      console.warn(`  ! could not back-date: ${error.message}`);
+      console.warn('    (the data is fine - it just all carries today\'s date)');
+    }
+  }
 
   // ------------------------------------------------------------ the proof
   console.log('\nChecking the books…');

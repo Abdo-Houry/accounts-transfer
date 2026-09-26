@@ -11,7 +11,9 @@ const router = Router();
  */
 router.post(
   '/login',
-  rateLimit({ windowMs: 15 * 60_000, max: 10, keyPrefix: 'login' }),
+  // Only wrong passwords count, so a shared office address is not locked out
+  // by people signing in normally.
+  rateLimit({ windowMs: 15 * 60_000, max: 20, keyPrefix: 'login', countOnlyFailures: true }),
   validate(authValidation.loginSchema),
   asyncHandler(AuthController.login),
 );
