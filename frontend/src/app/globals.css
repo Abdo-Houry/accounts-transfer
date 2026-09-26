@@ -1,0 +1,213 @@
+@import 'tailwindcss';
+
+/*
+ * Design tokens.
+ *
+ * The office identity is a deep green (#06332e) with a muted gold (#b9aa7c) on
+ * black and white. Green carries structure and primary actions; gold is used
+ * sparingly, for emphasis and highlights, so it keeps its weight.
+ *
+ * Semantic status colours (money in / money out / warning) sit outside the
+ * brand palette on purpose: on an operations screen the difference between an
+ * inflow and an outflow has to be readable at a glance, and two shades of the
+ * brand cannot carry that.
+ */
+@theme {
+  --color-brand-50: #eef5f3;
+  --color-brand-100: #d3e5e1;
+  --color-brand-200: #a7cbc3;
+  --color-brand-300: #6da9a0;
+  --color-brand-400: #3d857c;
+  --color-brand-500: #1d6259;
+  --color-brand-600: #0e4a43;
+  --color-brand-700: #06332e;
+  --color-brand-800: #052824;
+  --color-brand-900: #031a18;
+
+  --color-gold-50: #faf8f3;
+  --color-gold-100: #f2ede0;
+  --color-gold-200: #e4dac2;
+  --color-gold-300: #d3c49f;
+  --color-gold-400: #c4b389;
+  --color-gold-500: #b9aa7c;
+  --color-gold-600: #a08f5f;
+  --color-gold-700: #7d6f48;
+  --color-gold-800: #5a5034;
+  --color-gold-900: #3a3421;
+
+  --color-ink: #000000;
+  --color-paper: #ffffff;
+
+  --color-positive: #0f7b52;
+  --color-positive-soft: #e6f4ee;
+  --color-negative: #b3261e;
+  --color-negative-soft: #fdecea;
+  --color-warning: #a15c00;
+  --color-warning-soft: #fdf3e2;
+  --color-info: #1a5f8a;
+  --color-info-soft: #e8f2f8;
+
+  --font-sans:
+    'IBM Plex Sans Arabic', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  /* Tabular figures so columns of money line up digit for digit. */
+  --font-mono: 'IBM Plex Sans Arabic', ui-monospace, 'SFMono-Regular', 'Menlo', monospace;
+
+  --radius-card: 0.875rem;
+  --shadow-card: 0 1px 2px rgb(3 26 24 / 0.06), 0 8px 24px -12px rgb(3 26 24 / 0.18);
+  --shadow-pop: 0 12px 40px -12px rgb(3 26 24 / 0.28);
+}
+
+/* --------------------------------------------------------------- surfaces */
+:root {
+  --surface-page: #f4f6f5;
+  --surface-card: #ffffff;
+  --surface-muted: #eef1f0;
+  --surface-sidebar: #06332e;
+  --surface-sidebar-hover: #0e4a43;
+  --border-subtle: #dfe4e2;
+  --border-strong: #c3ccc9;
+  --text-primary: #0b1f1c;
+  --text-secondary: #4c5f5b;
+  --text-muted: #7b8c88;
+  --text-on-brand: #f2ede0;
+}
+
+.dark {
+  --surface-page: #071312;
+  --surface-card: #0d1e1c;
+  --surface-muted: #132825;
+  --surface-sidebar: #031a18;
+  --surface-sidebar-hover: #06332e;
+  --border-subtle: #1c332f;
+  --border-strong: #2a4540;
+  --text-primary: #e9efed;
+  --text-secondary: #a7b8b4;
+  --text-muted: #758a86;
+  --text-on-brand: #f2ede0;
+}
+
+/* ------------------------------------------------------------------ base */
+* {
+  border-color: var(--border-subtle);
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background-color: var(--surface-page);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-feature-settings: 'cv02', 'cv03', 'cv04';
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Money and document numbers: tabular figures, latin digits, never wrapped. */
+.numeric {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum';
+  white-space: nowrap;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* An amount inside RTL prose still reads left to right. */
+[dir='rtl'] .numeric {
+  text-align: right;
+}
+
+/*
+ * A numeric column anchors to one physical edge in every text direction.
+ *
+ * `.numeric` puts `direction: ltr` on the box so a figure keeps its own run.
+ * That also re-anchors any *logical* alignment on the same element, so a cell
+ * marked `text-end` resolved to the right while its `text-end` header - laid
+ * out in the page direction - resolved to the left, and every amount in Arabic
+ * sat under the wrong edge of its own heading. Numeric headers and cells share
+ * this class instead, so the two can never disagree.
+ */
+.num-col {
+  text-align: right;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-gold-500);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 9999px;
+  border: 3px solid var(--surface-page);
+}
+
+/* --------------------------------------------------------------- utilities */
+@utility card {
+  background-color: var(--surface-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-card);
+}
+
+@utility surface-muted {
+  background-color: var(--surface-muted);
+}
+
+@utility text-secondary {
+  color: var(--text-secondary);
+}
+
+@utility text-muted {
+  color: var(--text-muted);
+}
+
+/* ------------------------------------------------------------------ print */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #ffffff;
+  }
+  .card {
+    box-shadow: none;
+    border-color: #cccccc;
+  }
+  @page {
+    margin: 12mm;
+  }
+}
+
+/* ------------------------------------------------------------ animations */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-fade-in {
+  animation: fade-in 180ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

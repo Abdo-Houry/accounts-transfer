@@ -1,0 +1,21 @@
+# dependencies
+node_modules/
+
+# build output
+dist/
+build/
+
+# secrets and local config - never commit these
+.env
+.env.*
+!.env.example
+
+# logs and local runtime files
+*.log
+uploads/
+
+# editor / OS
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
