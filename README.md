@@ -359,3 +359,4 @@ platform that offers no shell access.
 | [`docs/01-architecture.md`](docs/01-architecture.md) | Layers, invariants, chart of accounts, and the exact journal entry for every operation |
 | [`docs/02-database-schema.md`](docs/02-database-schema.md) | Every table, column, index and relationship |
 | [`docs/03-api-endpoints.md`](docs/03-api-endpoints.md) | Every endpoint with its required permission, plus the error-code table |
+| [`docs/04-operations.md`](docs/04-operations.md) | Runbook: deployment, moving the database, rebuilding demo data, and what each failure symptom means |
