@@ -1,274 +1,287 @@
 <div align="center">
 
-# نظام إدارة مكتب حوالات وصرافة ومحاسبة
+# Remittance, Currency Exchange & Accounting System
 
-**Remittance, Currency Exchange & Accounting System**
-
-نظام محاسبي متعدد العملات مبني على القيد المزدوج · عربي / English / Türkçe
+A production-grade, multi-currency back office for a money-transfer bureau —
+built as a real double-entry accounting system, not a CRUD application.
 
 <br>
 
-![Node](https://img.shields.io/badge/Node.js-20+-339933?style=flat-square&logo=node.js&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-5.4-3178C6?style=flat-square&logo=typescript&logoColor=white)
+![Node](https://img.shields.io/badge/Node.js-22_LTS-339933?style=flat-square&logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript&logoColor=white)
 ![React](https://img.shields.io/badge/React-18-61DAFB?style=flat-square&logo=react&logoColor=black)
-![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-4169E1?style=flat-square&logo=postgresql&logoColor=white)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?style=flat-square&logo=postgresql&logoColor=white)
 ![TypeORM](https://img.shields.io/badge/TypeORM-0.3-FE0803?style=flat-square)
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white)
+
+**[▶ Live demo](https://remittance-office.onrender.com)** · `demo` / `Demo-View-2026!`
+
+<sub>Read-only account, entirely fictional data. Free hosting sleeps when idle —
+the first load may take up to a minute.</sub>
 
 </div>
 
 ---
 
-> **English summary** — A production-grade, multi-currency remittance and
-> currency-exchange system for a money-transfer office, built as a real
-> double-entry accounting system rather than a CRUD application. Every operation
-> posts a balanced journal entry; balances are derived from the ledger and never
-> written by hand. Cleanly separated React frontend and Node/Express backend,
-> with role-based access control, an immutable audit trail, and Arabic /
-> English / Turkish interfaces including RTL. Verified end-to-end against a live
-> PostgreSQL instance, including concurrency testing.
+## Contents
+
+- [Overview](#overview)
+- [Architecture](#architecture)
+- [Tech stack](#tech-stack)
+- [Features](#features)
+- [The accounting core](#the-accounting-core)
+- [Security model](#security-model)
+- [Internationalisation](#internationalisation)
+- [Verification](#verification)
+- [Running locally](#running-locally)
+- [Deployment](#deployment)
+- [Documentation](#documentation)
 
 ---
 
-## 📋 المحتويات
+## Overview
 
-- [نظرة عامة](#-نظرة-عامة)
-- [بنية المشروع: فصل الواجهة عن الخادم](#️-بنية-المشروع-فصل-الواجهة-عن-الخادم)
-- [التقنيات المستخدمة](#️-التقنيات-المستخدمة)
-- [الوظائف](#️-الوظائف)
-- [جوهر النظام المحاسبي](#-جوهر-النظام-المحاسبي)
-- [الأمان والصلاحيات](#-الأمان-والصلاحيات)
-- [تعدد اللغات](#-تعدد-اللغات)
-- [الاختبار والتحقق](#-الاختبار-والتحقق)
-- [التشغيل](#-التشغيل)
+A complete back office for a money-transfer bureau: sending and paying out
+remittances, currency exchange, multi-currency cash boxes, customer and
+correspondent accounts, receipt and payment vouchers, and a full general ledger
+with financial and operational reporting.
 
----
+**What makes it different:** this was not built as a set of data-entry screens.
+Every financial operation posts a **balanced double-entry journal entry**,
+balances are **derived from the ledger** rather than written by hand, and posted
+entries are **never edited or deleted** — corrections are made with a reversing
+entry.
 
-## 🎯 نظرة عامة
-
-نظام متكامل لإدارة مكتب حوالات وصرافة: إرسال الحوالات وقبضها، تصريف العملات،
-إدارة الصناديق متعددة العملات، حسابات العملاء والمكاتب المراسلة، سندات القبض
-والصرف، ودفتر قيود محاسبي كامل مع تقارير مالية وتشغيلية.
-
-**النقطة الجوهرية:** النظام لم يُبنَ كشاشات إدخال بيانات، بل كنظام محاسبي حقيقي.
-كل عملية مالية تُنتج **قيداً مزدوجاً متوازناً**، والأرصدة **محسوبة من دفتر القيود**
-لا مكتوبة يدوياً، والقيود **لا تُعدَّل ولا تُحذف** بل تُصحَّح بقيد عكسي.
+The interface is available in **Arabic, English and Turkish**, with full RTL
+support.
 
 ---
 
-## 🏗️ بنية المشروع: فصل الواجهة عن الخادم
+## Architecture
 
-المشروع مفصول فصلاً تاماً إلى تطبيقين مستقلين، لكل منهما مستودع اعتمادياته ودورة
-بنائه الخاصة. الاتصال بينهما يتم **حصراً** عبر واجهة HTTP موثّقة (REST API)،
-ولا يشارك أحدهما الآخر أي كود أو حالة.
+The system is split into two independent applications with separate dependency
+trees and build pipelines. They communicate **exclusively** over a documented
+HTTP API and share no code or state.
 
 ```
 accounts-transfer/
 │
-├── 📂 backend/                  ← الخادم (API) — مستقل تماماً
+├── backend/                     REST API — independent application
 │   ├── src/
-│   │   ├── config/              الإعدادات، الاتصال بقاعدة البيانات، دليل الحسابات، الصلاحيات
-│   │   ├── entities/            جداول قاعدة البيانات (TypeORM)
-│   │   ├── services/            ★ منطق الأعمال بالكامل — لا شيء منه في المتحكّمات
-│   │   ├── controllers/         طبقة رقيقة: تقرأ الطلب ← تنادي الخدمة ← ترجع الرد
-│   │   ├── routes/              المسارات + الصلاحية المطلوبة لكل مسار
-│   │   ├── middleware/          المصادقة، الصلاحيات، التحقق، معالجة الأخطاء مركزياً
-│   │   ├── validations/         مخططات التحقق (Zod) لكل مدخل
-│   │   ├── models/              عقود البيانات بين الطبقات
-│   │   ├── utils/               الحساب العشري الدقيق، الرسائل متعددة اللغات، الترقيم
-│   │   └── database/            الترحيلات (Migrations) والبيانات الأساسية
-│   └── scripts/                 سكربتات التحقق المالي والتزامن وبيانات العرض
+│   │   ├── config/              environment, data source, chart of accounts, permissions
+│   │   ├── entities/            database schema (TypeORM)
+│   │   ├── services/            ★ all business logic — none of it lives in controllers
+│   │   ├── controllers/         thin: parse request → call service → return response
+│   │   ├── routes/              paths and the permission each one requires
+│   │   ├── middleware/          auth, authorisation, validation, centralised errors
+│   │   ├── validations/         Zod schema per input
+│   │   ├── models/              data contracts between layers
+│   │   ├── utils/               exact decimal arithmetic, i18n messages, numbering
+│   │   └── database/            migrations and base seed
+│   └── scripts/                 verification suites and demo data
 │
-├── 📂 frontend/                 ← الواجهة (SPA) — مستقلة تماماً
+├── frontend/                    Single-page application — independent
 │   └── src/
-│       ├── api/                 عميل HTTP + وحدة لكل نطاق من نطاقات الـ API
-│       ├── app/                 نقطة الدخول، المزوّدات، نظام التصميم
-│       ├── components/          مكتبة واجهة: ui / common / layout
-│       ├── context/             المصادقة، اللغة، المظهر
-│       ├── features/            خطّافات (Hooks) واستعلامات لكل ميزة
-│       ├── pages/               صفحات التطبيق
-│       ├── routes/              التوجيه وحماية المسارات بالصلاحيات
-│       ├── i18n/                قواميس الترجمة الثلاثة
-│       ├── lib/                 التنسيق، الصلاحيات، الأدوات
-│       └── types/               أنواع مطابقة لعقود الـ API
+│       ├── api/                 HTTP client + one module per API domain
+│       ├── app/                 entry point, providers, design system
+│       ├── components/          ui / common / layout
+│       ├── context/             auth, language, theme
+│       ├── features/            hooks and queries per feature
+│       ├── pages/               application screens
+│       ├── routes/              routing and permission guards
+│       ├── i18n/                three message catalogues
+│       ├── lib/                 formatting, permissions, helpers
+│       └── types/               types mirroring the API contracts
 │
-└── 📂 docs/                     توثيق المعمارية وقاعدة البيانات والـ API
+└── docs/                        architecture, database schema, API reference
 ```
 
-### لماذا هذا الفصل؟
+### Why the separation matters
 
-| الجانب | الخادم `backend/` | الواجهة `frontend/` |
+| Concern | `backend/` | `frontend/` |
 |---|---|---|
-| **المسؤولية** | منطق الأعمال، القيود المحاسبية، الصلاحيات | العرض والتفاعل فقط |
-| **مصدر الحقيقة** | ✅ المرجع الوحيد | ❌ لا يقرّر شيئاً |
-| **التحقق من المدخلات** | ✅ إلزامي على كل طلب | مساعد لتجربة المستخدم فقط |
-| **الصلاحيات** | ✅ تُفحص في كل طلب | تُخفي ما لا يملكه المستخدم |
-| **الحسابات المالية** | ✅ تُحسب وتُعاد حسابها هنا | تعرض ما يرجع من الخادم |
-| **البناء** | `tsc` ← `dist/` | `vite build` ← `dist/` |
+| Responsibility | business logic, journal entries, authorisation | presentation and interaction |
+| Source of truth | ✅ the only authority | ❌ decides nothing |
+| Input validation | ✅ mandatory on every request | UX assistance only |
+| Permissions | ✅ checked on every request | hides what the user cannot use |
+| Financial calculation | ✅ computed and re-computed here | renders what the server returns |
+| Build output | `tsc` → `dist/` | `vite build` → `dist/` |
 
-> **مبدأ أساسي:** إخفاء زر في الواجهة ليس إجراءً أمنياً. كل عملية تُفحص صلاحيتها
-> مرة أخرى في الخادم، وأي طلب مُصاغ يدوياً يُرفض بـ `403` حتى لو لم يظهر الزر أصلاً.
+> **Hiding a button is not a security control.** Every operation is
+> re-authorised on the server, and a hand-crafted request is rejected with `403`
+> regardless of what the interface displayed.
 
 ---
 
-## 🛠️ التقنيات المستخدمة
+## Tech stack
 
 <table>
-<tr><th align="right">الخادم (Backend)</th><th align="right">الواجهة (Frontend)</th></tr>
+<tr><th align="left">Backend</th><th align="left">Frontend</th></tr>
 <tr valign="top"><td>
 
-- **Node.js** + **TypeScript** (وضع `strict`)
-- **Express** — إطار الخادم
-- **TypeORM** — ORM والترحيلات
-- **PostgreSQL** — قاعدة البيانات
-- **Zod** — التحقق من المدخلات
-- **JWT** + **bcrypt** — المصادقة
-- **Helmet** / **CORS** / **Compression**
+- **Node.js** + **TypeScript** (`strict`)
+- **Express** — HTTP layer
+- **TypeORM** — ORM and migrations
+- **PostgreSQL** — database
+- **Zod** — input validation
+- **JWT** + **bcrypt** — authentication
+- **Helmet** / **CORS** / **compression**
 
 </td><td>
 
 - **React 18** + **TypeScript**
-- **Vite** — أداة البناء
-- **Tailwind CSS v4** — نظام التصميم
-- **TanStack Query** — إدارة حالة الخادم
+- **Vite** — build tooling
+- **Tailwind CSS v4** — design system
+- **TanStack Query** — server state
 - **React Hook Form** + **Zod**
-- **Radix UI** — مكوّنات وصولية
-- **React Router** — التوجيه
+- **Radix UI** — accessible primitives
+- **React Router** — routing
 
 </td></tr>
 </table>
 
 ---
 
-## ⚙️ الوظائف
+## Features
 
 <details open>
-<summary><b>الحوالات</b></summary>
+<summary><b>Remittances</b></summary>
 
-- إرسال وقبض، مع دورة حياة محكومة: `قيد الانتظار ← مُرسلة ← مقبوضة` أو `ملغاة`
-- **منع أي انتقال غير مسموح** على مستوى الخادم (لا يمكن قبض حوالة ملغاة أو قبضها مرتين)
-- سجل كامل لتغيّر الحالات: من غيّر، ومتى، ولماذا
-- شباك قبض بالبحث برقم الحوالة أو الهاتف أو اسم المستفيد
-- عمولة على المرسل أو المستفيد، وتحويل عملة عند الحاجة بسعر متقاطع
-- إيصال قابل للطباعة مع رمز QR
-- توجيه الحوالة عبر مكتب مراسل بدل الدفع من الصندوق
-
-</details>
-
-<details>
-<summary><b>الصرافة وأسعار الصرف</b></summary>
-
-- بيع وشراء وفق لوحة أسعار شراء/مبيع
-- احتساب السعر المتقاطع تلقائياً بين أي عملتين عبر العملة الأساسية
-- **سجل تاريخي كامل:** السعر لا يُستبدل أبداً، بل يُغلق ويُفتح سعر جديد — فأي عملية قديمة يمكن إعادة تسعيرها بسعرها الأصلي
-- إمكانية عكس عملية تصريف بقيد عكسي كامل
+- Send and pay out, with an enforced lifecycle: `Pending → Sent → Received`, or `Cancelled`
+- **Illegal transitions are impossible** — a cancelled transfer cannot be paid, and a paid transfer cannot be paid twice
+- Full status history: who changed what, when, and why
+- Payout desk search by transfer number, phone, or beneficiary name
+- Commission charged to sender or beneficiary; optional currency conversion at a cross rate
+- Printable receipt with a QR code
+- Transfers can be routed through a correspondent office instead of paid from a cash box
 
 </details>
 
 <details>
-<summary><b>الصناديق والمكاتب المراسلة</b></summary>
+<summary><b>Currency exchange and rates</b></summary>
 
-- رصيد مستقل لكل عملة داخل كل صندوق
-- تحويل بين الصناديق، أرصدة افتتاحية، كشف حركة، إغلاق صندوق
-- **شاشة مطابقة:** تقارن الرصيد المسجّل مع مجموع دفتر القيود وتُظهر أي فرق
-- حسابات جارية مع المكاتب الشريكة في الخارج مع كشف حساب لكل مكتب
-
-</details>
-
-<details>
-<summary><b>العملاء والسندات والعمولات</b></summary>
-
-- ملف عميل كامل مع كشف حساب يجمع الحوالات والصرافة والسندات
-- صافي حساب العميل لكل عملة، مأخوذ من دفتر القيود مباشرة
-- سندات قبض وصرف مع إلغاء بقيد عكسي
-- قواعد عمولة قابلة للتهيئة: مبلغ ثابت / نسبة مئوية / شرائح، بحدود دنيا وعليا
+- Buying and selling against a published buy/sell board
+- Cross rates computed automatically between any two currencies via the base currency
+- **Full rate history** — a rate is never overwritten; it is closed and a new one opened, so any past deal can be re-priced at the rate that was live when it was booked
+- Deals can be reversed with a complete reversing entry
 
 </details>
 
 <details>
-<summary><b>المحاسبة والتقارير</b></summary>
+<summary><b>Cash boxes and correspondents</b></summary>
 
-- دفتر قيود مزدوج كامل + دليل حسابات
-- **ميزان مراجعة** متوازن لكل عملة على حدة
-- تقارير: الحوالات، الصرافة، العمولات، الصناديق، الأرباح والخسائر، العملاء، الموظفون
-- لوحة معلومات لحظية مع فلترة زمنية (اليوم / الأسبوع / الشهر / فترة مخصصة)
+- Independent balance per currency within each cash box
+- Box-to-box transfers, opening balances, statements, closing
+- **Reconciliation screen** — compares the recorded balance against the sum of the ledger and shows any difference
+- Running current accounts with partner offices abroad, each with its own statement
 
 </details>
 
 <details>
-<summary><b>الإدارة والتدقيق</b></summary>
+<summary><b>Customers, vouchers and commissions</b></summary>
 
-- أدوار وصلاحيات دقيقة قابلة للتعديل بالكامل
-- سجل تدقيق لكل عملية تمس المال أو الصلاحيات: المستخدم، العملية، البيانات قبل وبعد، الوقت، عنوان IP
+- Customer profile with a statement combining remittances, exchange deals and vouchers
+- Net position per currency, taken directly from the ledger
+- Receipt and payment vouchers, voidable by reversing entry
+- Configurable commission rules: fixed, percentage or tiered, with floors and caps
+
+</details>
+
+<details>
+<summary><b>Accounting and reporting</b></summary>
+
+- Complete double-entry ledger and chart of accounts
+- **Trial balance**, balanced per currency
+- Reports: remittances, exchange, commissions, cash boxes, profit & loss, customers, staff
+- Live dashboard with period filtering (day / week / month / custom range)
+
+</details>
+
+<details>
+<summary><b>Administration and audit</b></summary>
+
+- Fine-grained, fully editable roles and permissions
+- Audit trail for every action touching money or authorisation: user, action, before/after payload, timestamp, IP address
 
 </details>
 
 ---
 
-## 💠 جوهر النظام المحاسبي
+## The accounting core
 
-ثلاثة ثوابت مفروضة **بنيوياً** — لا بالاتفاق ولا بالانضباط:
+Three invariants are enforced **structurally** — not by convention or discipline:
 
-| # | الثابت | كيف يُضمَن |
+| # | Invariant | How it is guaranteed |
 |:--:|---|---|
-| **I1** | كل قيد متوازن **داخل كل عملة** | محرّك الترحيل يرفض أي قيد غير متوازن ويُلغي العملية كاملة |
-| **I2** | رصيد الصندوق = مجموع دفتر القيود دائماً | المحرّك هو **الكاتب الوحيد** للأرصدة، ويشتقّها من نفس البنود التي يكتبها، ضمن قفل على مستوى السجل |
-| **I3** | القيود **لا تُعدَّل ولا تُحذف** | لا يوجد مسار تعديل أو حذف في الكود؛ التصحيح بقيد عكسي فقط |
+| **I1** | Every entry balances **within each currency** | The posting engine refuses an unbalanced entry and rolls back the whole operation |
+| **I2** | A cash box balance always equals the sum of the ledger | The engine is the **only writer** of balances and derives each delta from the very lines it is inserting, under a row-level lock |
+| **I3** | Posted entries are **never edited or deleted** | No update or delete path exists in the code; corrections are made with a reversing entry |
 
-لأن كل مسار مالي يمرّ من نفس المحرّك، فإن خدمة تنسى التحقق من الرصيد **لا تستطيع**
-رغم ذلك أن تسحب على المكشوف، وخدمة تبني قيداً غير متوازن **لا تستطيع** ترحيله.
+Because every money path goes through the same engine, a service that forgets to
+check a balance still **cannot** overdraw a cash box, and a service that builds a
+lopsided entry **cannot** post it.
 
-**تعدد العملات** يُعالَج عبر حساب مقاصة (FX Position)، فيبقى دفتر كل عملة متوازناً
-بذاته دون اختلاق مبلغ وهمي بالعملة الأساسية.
+**Multi-currency** is handled through an FX position (clearing) account, so each
+currency's book balances on its own without inventing a fictitious base-currency
+amount.
 
-**دقة الأرقام:** المبالغ تُنقل كنصوص عشرية وتُعالَج كأعداد صحيحة كبيرة (`BigInt`)
-بمقياس ثابت — **لا يقترب أي رقم عشري عائم (float) من أي رصيد.**
-
----
-
-## 🔐 الأمان والصلاحيات
-
-- **رمز وصول (JWT)** قصير العمر يحمل الحد الأدنى فقط: المعرّف والدور ورقم إصدار — بلا اسم أو هاتف أو قائمة صلاحيات
-- **رمز تجديد** عشوائي مبهم في كوكي `httpOnly`، يُخزَّن كبصمة مُعمّاة و**يُدوَّر عند كل استخدام** — فإعادة استخدامه مرة ثانية تفشل وتكشف السرقة
-- **الصلاحيات تُقرأ من قاعدة البيانات في كل طلب**، فإيقاف مستخدم أو تعديل دوره يسري على طلبه التالي مباشرة لا عند انتهاء الرمز
-- كلمات المرور بـ **bcrypt**، ومحاولات الدخول مقيّدة، والاسم غير الموجود يُقارَن ببصمة وهمية حتى لا يكشف زمن الاستجابة أي الحسابات موجودة
+**Numeric precision:** amounts travel as decimal strings and are manipulated as
+scaled `BigInt` values — **no floating-point number ever touches a balance.**
 
 ---
 
-## 🌐 تعدد اللغات
+## Security model
 
-العربية · English · Türkçe — مع دعم كامل لاتجاه RTL.
-
-**رسائل النظام تُترجَم في الخادم نفسه:** الخدمات ترمي مفتاح رسالة مع معاملاتها،
-وطبقة الاستجابة تعرضها بلغة صاحب الطلب. لهذا يتحوّل الخطأ التقني إلى جملة مفهومة:
-
-> الرصيد غير كافٍ لإتمام العملية. الرصيد المتاح في صندوق "الصندوق الرئيسي" بعملة USD
-> هو 500، بينما المبلغ المطلوب هو 1,000 USD.
+- **Access token (JWT)**, short-lived, carrying the minimum: subject, role and a
+  version counter — no name, no phone, no permission list
+- **Refresh token**: an opaque random value in an `httpOnly` cookie, stored only
+  as a keyed hash and **rotated on every use**, so replaying one fails and
+  reveals the theft
+- **Permissions are read from the database on every request**, so suspending a
+  user or changing a role takes effect on their next request rather than at
+  token expiry
+- Passwords hashed with **bcrypt**; login attempts are rate-limited by failure
+  (a correct sign-in costs nothing, so shared office addresses are not locked
+  out), and an unknown username is compared against a dummy hash so response
+  time does not reveal which accounts exist
 
 ---
 
-## ✅ الاختبار والتحقق
+## Internationalisation
 
-شُغِّل النظام على قاعدة PostgreSQL حيّة واختُبر من طرف إلى طرف.
+Arabic · English · Türkçe, with full RTL support.
 
-### العمليات المالية — ٤٠/٤٠ ✅
+**System messages are translated on the server.** Services raise a message key
+with parameters, and the response layer renders it in the caller's language.
+That is what turns an HTTP status into something an operator can act on:
 
-- رفض السحب على المكشوف مع بيان الرصيد المتاح والمطلوب بالضبط
-- منع القبض قبل الإرسال، ومنع القبض مرتين، ومنع إلغاء حوالة مقبوضة
-- تسعير الحوالة عبر العملة الأساسية، واحتجاز العمولة بعد القبض بدقة
-- الإلغاء يُرجع ما قُبض بالضبط
-- **مطابقة الصناديق مع دفتر القيود بلا أي فرق**
-- **ميزان المراجعة متوازن في كل عملة** (SYP · USD · TRY · EUR)
+> Insufficient balance to complete the operation. The available balance in cash
+> box "Main" for USD is 500, while the required amount is 1,000 USD.
 
-### التزامن — ٨/٨ ✅
+---
 
-| الاختبار | النتيجة |
+## Verification
+
+The system was run against a live PostgreSQL instance and exercised end to end.
+
+### Financial operations — 41/41 ✅
+
+- Overdrafts refused, quoting the exact available and required amounts
+- Payout before dispatch refused; double payout refused; cancelling a paid transfer refused
+- Cross-currency transfers priced through the base currency; commission correctly retained after payout
+- Cancellation returns exactly what was collected
+- **Cash boxes reconcile against the ledger with zero difference**
+- **Trial balance balanced in every currency**
+
+### Concurrency — 9/9 ✅
+
+| Test | Result |
 |---|---|
-| ٦ طلبات قبض متزامنة لنفس الحوالة | نجح **واحد فقط**، والصندوق خُصم مرة واحدة |
-| ١٠ عمليات سحب متزامنة ٢٠٠$ من صندوق فيه ١٠٠٠$ | نجح **٥ فقط**، والرصيد استقر على **صفر** ولم يصبح سالباً أبداً |
-| حالة الدفاتر بعد اختبارات التزامن | متوازنة في كل عملة |
+| 6 simultaneous payout requests for one transfer | Exactly **one** succeeded; the box was debited once |
+| 10 simultaneous $200 withdrawals from a $1,000 box | Exactly **five** succeeded; the balance landed on **zero** and never went negative |
+| Books after the races | Balanced in every currency |
 
-سكربتات التحقق جزء من المستودع:
+Both suites are part of the repository and are safe to re-run:
 
 ```bash
 npm run verify
@@ -276,12 +289,12 @@ npm run verify
 
 ---
 
-## 🚀 التشغيل
+## Running locally
 
-**المتطلبات:** Node.js 18+ · PostgreSQL 14+
+**Requirements:** Node.js 20+ · PostgreSQL 14+
 
 <table>
-<tr><th align="right">الخادم</th><th align="right">الواجهة</th></tr>
+<tr><th align="left">Backend</th><th align="left">Frontend</th></tr>
 <tr valign="top"><td>
 
 ```bash
@@ -309,28 +322,40 @@ npm run dev
 </td></tr>
 </table>
 
-### وضع الأصل الواحد (للنشر)
+To populate a realistic dataset for a walkthrough:
 
-بتفعيل `SERVE_FRONTEND=true` يخدم الخادمُ واجهةَ المستخدم المبنية من منفذه نفسه —
-أصل واحد، بلا CORS ولا وسيط تطوير، وبأمر تشغيل واحد:
+```bash
+npm run seed:demo
+```
+
+Demo data is created through the public API rather than by inserting rows, so
+the seeded history is backed by genuine journal entries and passes the
+reconciliation and trial-balance screens.
+
+---
+
+## Deployment
+
+Setting `SERVE_FRONTEND=true` makes the API serve the built interface from its
+own port: a single origin, no CORS and no development proxy.
 
 ```bash
 cd frontend && npm run build
 cd ../backend && npm run build && npm start
 ```
 
+[`render.yaml`](render.yaml) describes the whole service, so a hosted
+environment can be recreated from the repository. `DATABASE_URL` is accepted as
+an alternative to the individual `DB_*` settings, and migrations and the
+idempotent base seed can run on boot — which is what allows deployment to a
+platform that offers no shell access.
+
 ---
 
-## 📚 التوثيق
+## Documentation
 
-| المستند | المحتوى |
+| Document | Contents |
 |---|---|
-| [`docs/01-architecture.md`](docs/01-architecture.md) | الطبقات، الثوابت، دليل الحسابات، والقيد المحاسبي الدقيق لكل عملية |
-| [`docs/02-database-schema.md`](docs/02-database-schema.md) | كل جدول وعمود وفهرس وعلاقة |
-| [`docs/03-api-endpoints.md`](docs/03-api-endpoints.md) | كل مسار مع صلاحيته المطلوبة وجدول رموز الأخطاء |
-
----
-
-<div align="center">
-<sub>تم تطوير هذا النظام بالكامل — الواجهة والخادم وقاعدة البيانات والتوثيق.</sub>
-</div>
+| [`docs/01-architecture.md`](docs/01-architecture.md) | Layers, invariants, chart of accounts, and the exact journal entry for every operation |
+| [`docs/02-database-schema.md`](docs/02-database-schema.md) | Every table, column, index and relationship |
+| [`docs/03-api-endpoints.md`](docs/03-api-endpoints.md) | Every endpoint with its required permission, plus the error-code table |
